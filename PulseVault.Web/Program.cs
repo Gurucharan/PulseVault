@@ -9,7 +9,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Point HttpClient directly to your running API port (https://localhost:7096/)
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri("https://localhost:7096/")
+    BaseAddress = new Uri("https://pulsevault-ofnt.onrender.com/")
 });
 
 await builder.Build().RunAsync();
