@@ -1,6 +1,0 @@
-@MedVault.Api_HostAddress = http://localhost:5220
-
-GET {{MedVault.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

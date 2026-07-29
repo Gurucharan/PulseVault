@@ -1,5 +1,5 @@
-# Step 1: Use the .NET 8 SDK image to build and publish the API
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# Step 1: Use the .NET 10 SDK image to build and publish the API
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy project file and restore dependencies
@@ -12,8 +12,8 @@ WORKDIR "/src/PulseVault.Api"
 RUN dotnet build "PulseVault.Api.csproj" -c Release -o /app/build
 RUN dotnet publish "PulseVault.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Step 2: Use lightweight ASP.NET 8 runtime to run the published DLL
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+# Step 2: Use lightweight ASP.NET 10 runtime to run the published DLL
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Expose port 8080 (Render's default port)
