@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedVault Dashboard</title>
+    <base href="/" />
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        window.renderLineChart = (canvasId, labels, dataPoints) => {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Fasting Blood Sugar (mg/dL)',
+                        data: dataPoints,
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { suggestedMin: 70, suggestedMax: 140 } }
+                }
+            });
+        };
+    </script>
+</head>
+<body style="background-color: #F8FAFC; margin: 0; padding: 0;">
+
+    <!-- Blazor Root Component Container -->
+    <div id="app">
+        <div style="padding: 40px; font-family: 'Segoe UI', sans-serif; color: #0F172A; text-align: center;">
+            <h2 style="color: #2563EB;">⌛ Loading MedVault Dashboard...</h2>
+            <p style="color: #64748B;">Initialising Blazor WebAssembly runtime...</p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" style="display:none; position: fixed; bottom: 0; width: 100%; background: #FEE2E2; color: #991B1B; padding: 10px; text-align: center;">
+        An unhandled error has occurred.
+        <a href="" class="reload" style="color: #2563EB; font-weight: bold;">Reload</a>
+    </div>
+
+    <!-- Blazor Framework JS -->
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+</html>

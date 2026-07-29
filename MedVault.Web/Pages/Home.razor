@@ -1,0 +1,265 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<div style="padding: 25px;">
+
+    <!-- Header Action Buttons -->
+    <div style="margin-bottom: 25px; display: flex; gap: 15px;">
+        <button @onclick="OpenUploadModal" style="background: #2563EB; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            ⬆ Upload New Report
+        </button>
+        <button @onclick="OpenDoctorModal" style="background: #0D9488; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            🔗 Share QR Code with Doctor
+        </button>
+    </div>
+
+    @if (dashboard == null)
+    {
+        <p style="color: #64748B;">⏳ Loading health dashboard...</p>
+    }
+    else
+    {
+        <!-- Vitals Cards Summary -->
+        <h3 style="color: #0F172A; margin-bottom: 15px;">Current Health Vitals Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            @foreach (var vital in dashboard.vitals)
+            {
+                <div style="background: white; border: 1px solid #E2E8F0; padding: 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <span style="color: #64748B; font-size: 14px; font-weight: 600;">🩸 @vital.name</span>
+                    <h2 style="color: #0F172A; margin: 10px 0; font-size: 28px;">@vital.value <small style="font-size: 14px; color: #64748B;">@vital.unit</small></h2>
+                    <span style="background: @vital.badgeColor; color: #854D0E; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">
+                        @vital.badgeText
+                    </span>
+                    <span style="float: right; color: #94A3B8; font-size: 12px;">@vital.lastTested</span>
+                </div>
+            }
+        </div>
+
+        <!-- Historical Trend Line Chart -->
+        <div style="background: white; border: 1px solid #E2E8F0; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+            <h3 style="color: #0F172A; margin-top: 0; margin-bottom: 20px;">📈 Historical Trend: Fasting Blood Sugar</h3>
+            <canvas id="sugarTrendChart" height="90"></canvas>
+        </div>
+
+        <!-- Stored Reports Table -->
+        <div style="background: white; border: 1px solid #E2E8F0; padding: 20px; border-radius: 10px;">
+            <h3 style="color: #0F172A; margin-top: 0; margin-bottom: 15px;">📂 Stored Lab Reports & Scans</h3>
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #F1F5F9; color: #475569; font-size: 13px;">
+                        <th style="padding: 12px;">Report Name</th>
+                        <th style="padding: 12px;">Lab Name</th>
+                        <th style="padding: 12px;">Test Date</th>
+                        <th style="padding: 12px;">Status</th>
+                        <th style="padding: 12px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rpt in dashboard.recentReports)
+                    {
+                        <tr style="border-bottom: 1px solid #F1F5F9; font-size: 14px;">
+                            <td style="padding: 12px; font-weight: 600; color: #0F172A;">📄 @rpt.title</td>
+                            <td style="padding: 12px; color: #64748B;">@rpt.labName</td>
+                            <td style="padding: 12px; color: #64748B;">@rpt.testDate</td>
+                            <td style="padding: 12px;"><span style="background: #FEF08A; color: #854D0E; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">🟡 @rpt.statusTag</span></td>
+                            <td style="padding: 12px;">
+                                <button @onclick="() => ViewReportDetails(rpt.id)" style="background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                                    🔍 View
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- UPLOAD MODAL (Screen 2) -->
+@if (showUploadModal)
+{
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; width: 500px; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #0F172A;">📝 Upload & Log Diagnostic Report</h3>
+                <button @onclick="() => showUploadModal = false" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748B;">✕</button>
+            </div>
+
+            <div style="border: 2px dashed #3B82F6; background: #EFF6FF; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 32px;">☁️</span>
+                <p style="margin: 5px 0; font-weight: 600; color: #1E40AF;">Drag & Drop Paper Scan or PDF</p>
+                <small style="color: #64748B;">Supports PDF, PNG, JPG (Max 15MB)</small>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: #475569;">Test / Report Title</label>
+                    <input @bind="newTestName" style="width: 100%; padding: 10px; border: 1px solid #CBD5E1; border-radius: 6px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: #475569;">Diagnostic Lab Name</label>
+                    <input @bind="newLabName" style="width: 100%; padding: 10px; border: 1px solid #CBD5E1; border-radius: 6px; box-sizing: border-box;" />
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: bold; color: #475569;">Test Date</label>
+                        <input type="date" @bind="newTestDate" style="width: 100%; padding: 10px; border: 1px solid #CBD5E1; border-radius: 6px; box-sizing: border-box;" />
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: bold; color: #475569;">Fasting Sugar (mg/dL)</label>
+                        <input @bind="newSugarVal" style="width: 100%; padding: 10px; border: 1px solid #CBD5E1; border-radius: 6px; box-sizing: border-box;" />
+                    </div>
+                </div>
+            </div>
+
+            <button @onclick="SubmitReport" style="width: 100%; background: #16A34A; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer;">
+                💾 Save to Vault & Refresh Trends
+            </button>
+        </div>
+    </div>
+}
+
+<!-- SCREEN 3: REPORT DETAILED VIEWER MODAL -->
+@if (showReportModal && activeReport != null)
+{
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; width: 850px; padding: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin: 0; color: #0F172A;">📄 @activeReport.title</h3>
+                    <small style="color: #64748B;">@activeReport.labName • @activeReport.testDate</small>
+                </div>
+                <button @onclick="() => showReportModal = false" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748B;">✕</button>
+            </div>
+
+            <div style="background: #FEF08A; color: #854D0E; padding: 10px 15px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-bottom: 20px;">
+                🟡 Self-Logged Record (Unverified by Pathologist)
+            </div>
+
+            <!-- Parameters Table -->
+            <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 20px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #E2E8F0; color: #475569; font-size: 12px;">
+                        <th style="padding: 10px;">PARAMETER</th>
+                        <th style="padding: 10px;">RESULT</th>
+                        <th style="padding: 10px;">REFERENCE RANGE</th>
+                        <th style="padding: 10px;">STATUS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var param in activeReport.parameters)
+                    {
+                        <tr style="border-bottom: 1px solid #F1F5F9; font-size: 14px;">
+                            <td style="padding: 12px; font-weight: 600; color: #0F172A;">@param.name</td>
+                            <td style="padding: 12px; font-weight: bold; color: #0F172A;">@param.result <small style="color: #64748B;">@param.unit</small></td>
+                            <td style="padding: 12px; color: #64748B;">@param.refRange</td>
+                            <td style="padding: 12px;">
+                                <span style="background: @param.badgeColor; color: @param.fontColor; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">
+                                    @param.status
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button @onclick="() => showReportModal = false" style="background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- SCREEN 4: DOCTOR ACCESS & QR CODE MODAL -->
+@if (showDoctorModal)
+{
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: white; border-radius: 12px; width: 450px; padding: 30px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 10px 0; color: #0F172A;">🔗 Temporary Doctor Access</h3>
+            <p style="color: #64748B; font-size: 13px; margin-bottom: 20px;">Let your consulting doctor scan this QR code to view your health trends instantly without logging in.</p>
+
+            <!-- QR Code Placeholder Box -->
+            <div style="background: #F8FAFC; border: 2px dashed #94A3B8; padding: 25px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://localhost:7200/doctor-view/8924" alt="Doctor Access QR" />
+                <div style="margin-top: 10px; font-size: 11px; color: #64748B;">📱 Scan with phone camera</div>
+            </div>
+
+            <div style="font-size: 11px; font-weight: bold; color: #64748B; margin-bottom: 5px;">GUEST ACCESS PIN</div>
+            <div style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #2563EB; font-size: 24px; font-weight: bold; letter-spacing: 6px; padding: 8px; border-radius: 8px; margin-bottom: 15px;">
+                8 9 2 4
+            </div>
+
+            <div style="color: #DC2626; font-size: 12px; font-weight: bold; margin-bottom: 20px;">⏱ Access expires automatically in 14m 32s</div>
+
+            <button @onclick="() => showDoctorModal = false" style="width: 100%; background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                Revoke Access & Close
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardResponse? dashboard;
+    private ReportDetailResponse? activeReport;
+
+    private bool showUploadModal = false;
+    private bool showReportModal = false;
+    private bool showDoctorModal = false;
+
+    private string newTestName = "Fasting Glucose Profile";
+    private string newLabName = "Apollo Diagnostics";
+    private DateTime newTestDate = DateTime.Today;
+    private string newSugarVal = "130";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        dashboard = await Http.GetFromJsonAsync<DashboardResponse>("api/dashboard");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (dashboard != null && dashboard.fastingSugarTrends != null)
+        {
+            try
+            {
+                var labels = dashboard.fastingSugarTrends.Select(t => t.dateLabel).ToArray();
+                var values = dashboard.fastingSugarTrends.Select(t => t.value).ToArray();
+                await JS.InvokeVoidAsync("renderLineChart", "sugarTrendChart", labels, values);
+            }
+            catch { }
+        }
+    }
+
+    private void OpenUploadModal() => showUploadModal = true;
+    private void OpenDoctorModal() => showDoctorModal = true;
+
+    private async Task ViewReportDetails(int reportId)
+    {
+        activeReport = await Http.GetFromJsonAsync<ReportDetailResponse>($"api/reports/{reportId}");
+        showReportModal = true;
+    }
+
+    private async Task SubmitReport()
+    {
+        var req = new { TestName = newTestName, LabName = newLabName, TestDate = newTestDate.ToString("dd-MMM-yyyy"), SugarValue = newSugarVal };
+        await Http.PostAsJsonAsync("api/reports/upload", req);
+        showUploadModal = false;
+        await LoadDashboard();
+    }
+
+    public class Vital { public string name { get; set; } = ""; public string value { get; set; } = ""; public string unit { get; set; } = ""; public string badgeText { get; set; } = ""; public string badgeColor { get; set; } = ""; public string lastTested { get; set; } = ""; }
+    public class Trend { public string dateLabel { get; set; } = ""; public double value { get; set; } }
+    public class Report { public int id { get; set; } public string title { get; set; } = ""; public string labName { get; set; } = ""; public string testDate { get; set; } = ""; public string statusTag { get; set; } = ""; }
+    public class DashboardResponse { public string patientName { get; set; } = ""; public List<Vital> vitals { get; set; } = new(); public List<Trend> fastingSugarTrends { get; set; } = new(); public List<Report> recentReports { get; set; } = new(); }
+
+    public class ParamDetail { public string name { get; set; } = ""; public string result { get; set; } = ""; public string unit { get; set; } = ""; public string refRange { get; set; } = ""; public string status { get; set; } = ""; public string badgeColor { get; set; } = ""; public string fontColor { get; set; } = ""; }
+    public class ReportDetailResponse { public int id { get; set; } public string title { get; set; } = ""; public string labName { get; set; } = ""; public string testDate { get; set; } = ""; public List<ParamDetail> parameters { get; set; } = new(); }
+}

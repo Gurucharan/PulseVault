@@ -1,0 +1,101 @@
+﻿@page "/doctor-view/{Pin}"
+@inject HttpClient Http
+
+<div style="background-color: #0F172A; min-height: 100vh; padding: 20px; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; justify-content: center;">
+
+    <!-- Mobile Card Simulator Shell -->
+    <div style="background: white; width: 100%; max-width: 480px; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); height: fit-content;">
+
+        <!-- Header badge -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
+            <div>
+                <span style="font-size: 11px; font-weight: bold; color: #2563EB; background: #EFF6FF; padding: 3px 8px; border-radius: 4px;">👨‍⚕️ DOCTOR READ-ONLY PORTAL</span>
+                <h2 style="margin: 5px 0 0 0; color: #0F172A; font-size: 20px;">Gurucharan</h2>
+                <small style="color: #64748B;">28 / Male • Patient Shared Profile</small>
+            </div>
+            <span style="background: #FEF2F2; color: #DC2626; font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: bold;">⏱ Session Active</span>
+        </div>
+
+        @if (docSummary == null)
+        {
+            <p style="color: #64748B; text-align: center; padding: 20px;">⌛ Verifying access PIN and fetching record...</p>
+        }
+        else
+        {
+            <!-- Key Vitals Snapshot -->
+            <h4 style="color: #334155; margin-bottom: 10px; font-size: 14px;">📊 Latest Vitals Snapshot</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px;">
+                @foreach (var v in docSummary.keyVitals)
+                {
+                    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 12px; color: #64748B;">@v.label</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #0F172A;">@v.value</div>
+                        </div>
+                        <span style="font-size: 11px; font-weight: bold; background: #FEF08A; color: #854D0E; padding: 3px 8px; border-radius: 4px;">@v.trend</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Out-of-Range Flags -->
+            <h4 style="color: #DC2626; margin-bottom: 10px; font-size: 14px;">⚠️ High / Out-of-Range Parameters</h4>
+            <div style="background: #FEF2F2; border: 1px solid #FCA5A5; padding: 15px; border-radius: 10px; margin-bottom: 25px;">
+                @foreach (var flag in docSummary.flaggedParameters)
+                {
+                    <div style="margin-bottom: 10px; border-bottom: 1px dashed #F87171; padding-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #991B1B;">
+                            <span>@flag.test</span>
+                            <span>@flag.value</span>
+                        </div>
+                        <div style="font-size: 11px; color: #7F1D1D; margin-top: 2px;">Expected: @flag.normalRange (@flag.date)</div>
+                    </div>
+                }
+            </div>
+
+            <!-- Timeline -->
+            <h4 style="color: #334155; margin-bottom: 10px; font-size: 14px;">📂 Medical History Timeline</h4>
+            <div style="font-size: 12px; color: #475569;">
+                @foreach (var h in docSummary.recentHistory)
+                {
+                    <div style="padding: 8px 0; border-left: 2px solid #2563EB; padding-left: 12px; margin-bottom: 8px;">
+                        <strong>@h.date</strong><br />
+                        <span style="color: #64748B;">@h.eventName</span>
+                    </div>
+                }
+            </div>
+
+            <div style="margin-top: 25px; text-align: center; border-top: 1px solid #E2E8F0; padding-top: 15px;">
+                <small style="color: #94A3B8; font-size: 11px;">🔒 Encrypted Local Access • Powered by MedVault</small>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Pin { get; set; } = "8924";
+    private DoctorSummaryDto? docSummary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            docSummary = await Http.GetFromJsonAsync<DoctorSummaryDto>($"api/doctor-view/{Pin}");
+        }
+        catch
+        {
+            // Fallback mock if invalid pin
+        }
+    }
+
+    public class VitalItem { public string label { get; set; } = ""; public string value { get; set; } = ""; public string trend { get; set; } = ""; }
+    public class FlaggedItem { public string test { get; set; } = ""; public string value { get; set; } = ""; public string normalRange { get; set; } = ""; public string date { get; set; } = ""; }
+    public class HistoryItem { public string date { get; set; } = ""; public string eventName { get; set; } = ""; }
+    public class DoctorSummaryDto
+    {
+        public string patientName { get; set; } = "";
+        public string ageGender { get; set; } = "";
+        public List<VitalItem> keyVitals { get; set; } = new();
+        public List<FlaggedItem> flaggedParameters { get; set; } = new();
+        public List<HistoryItem> recentHistory { get; set; } = new();
+    }
+}
