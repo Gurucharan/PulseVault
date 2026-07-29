@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "PulseVault.Web/PulseVault.Web.csproj",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "output/wwwroot"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
